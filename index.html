@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#120400">
+<title>ItihaskarStudio — AI Documentary Automation Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  --ground:#120400; --ink:#fff; --soft:rgba(255,255,255,.75); --faint:rgba(255,255,255,.7);
+  --flame:#ff3d00; --lit:#ff8a1f; --amber:#ffb36b; --dark:#180600;
+  --line:rgba(255,255,255,.14); --glass:rgba(56,20,6,.45); --glass2:rgba(40,13,3,.62);
+  --display:'Inter Tight',system-ui,sans-serif; --body:'Inter',system-ui,sans-serif; --serif:'Instrument Serif',Georgia,serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0}
+body{background:var(--ground);color:var(--ink);font-family:var(--body);line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100svh;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--lit);outline-offset:3px;border-radius:6px}
+em{font-family:var(--serif);font-weight:400;color:var(--lit)}
+
+/* ---------- shared ---------- */
+.view{min-height:100svh;display:flex;flex-direction:column}
+.brand{font-family:var(--display);font-weight:600;font-size:22px;letter-spacing:-.025em}
+.kicker{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+.btn{min-height:42px;padding:0 18px;border-radius:999px;font-size:13.5px;font-weight:500;border:1px solid rgba(255,255,255,.28);background:rgba(28,10,2,.5);transition:background .15s}
+.btn:hover{background:rgba(255,255,255,.12)}
+.btn--white{background:#fff;color:var(--dark);border-color:#fff;font-weight:600}
+.btn--white:hover{background:#fff4ec}
+.btn--danger{background:rgba(220,38,38,.22);border-color:rgba(248,113,113,.45);color:#fecaca}
+.btn--danger:hover{background:rgba(220,38,38,.38)}
+.btn--ok{background:rgba(16,185,129,.22);border-color:rgba(110,231,183,.45);color:#a7f3d0}
+.btn--ok:hover{background:rgba(16,185,129,.36)}
+.card{border:1px solid var(--line);border-radius:24px;background:var(--glass)}
+.dot{width:8px;height:8px;border-radius:50%;background:#7ee787;flex:none}
+.dot.off{background:var(--amber)}
+.field label{display:block;margin-bottom:6px;font-size:13px;font-weight:500;color:rgba(255,255,255,.85)}
+.field input,.field select{width:100%;min-height:48px;padding:0 14px;border:1px solid rgba(255,255,255,.22);border-radius:14px;background:rgba(18,4,0,.75);color:#fff;font:inherit;font-size:15px;color-scheme:dark}
+.field input::placeholder{color:rgba(255,255,255,.5)}
+.msg{min-height:20px;margin-top:10px;font-size:13.5px;color:var(--amber)}
+.msg.err{color:#fca5a5}
+
+/* ---------- slide-to-confirm button ---------- */
+.slide{position:relative;width:100%;height:54px;touch-action:none;cursor:grab;border-radius:999px;overflow:hidden;user-select:none;
+  background:linear-gradient(96deg,var(--flame),var(--lit));box-shadow:0 14px 40px rgba(255,61,0,.38)}
+.sl-label,.sl-done{position:absolute;inset:0 0 0 54px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:var(--dark);white-space:nowrap;pointer-events:none}
+.sl-done{opacity:0}
+.slide.is-done .sl-done{opacity:1}
+.slide.is-done .sl-label{opacity:0!important}
+.sl-knob{position:absolute;left:7px;top:7px;width:40px;height:40px;border-radius:50%;background:var(--dark);color:var(--lit);display:grid;place-items:center;cursor:grab;touch-action:none;transition:transform .3s cubic-bezier(.16,1,.3,1)}
+.sl-knob.drag{transition:none;cursor:grabbing}
+.sl-knob svg{width:18px;height:18px}
+.slide.busy{opacity:.85}
+
+/* ---------- HOME ---------- */
+#home{position:relative;overflow:hidden;
+  background:radial-gradient(120% 60% at 50% 112%,#ff3d00 0%,#ff8a1f 9%,rgba(255,61,0,.38) 28%,rgba(18,4,0,0) 62%),var(--ground)}
+.mark{position:absolute;left:30px;bottom:-46px;font-family:var(--display);font-weight:700;font-size:clamp(100px,18vw,270px);letter-spacing:-.05em;line-height:1;color:rgba(255,255,255,.06);pointer-events:none}
+.nav{position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:22px clamp(18px,3vw,44px)}
+.pillnav{display:none;gap:4px;padding:5px;border:1px solid var(--line);border-radius:12px;background:rgba(28,10,2,.4)}
+.pillnav a{padding:9px 16px;border-radius:8px;font-size:14px;color:rgba(255,255,255,.85)}
+.pillnav a:first-child{background:rgba(255,255,255,.07)}
+.nav-actions{display:flex;gap:10px}
+@media(min-width:900px){.pillnav{display:flex}}
+.hero{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:56px;width:100%;max-width:1360px;margin:0 auto;padding:48px clamp(18px,3vw,44px) 40px}
+.lead{flex:1 1 520px;display:flex;flex-direction:column;gap:28px}
+.tag{align-self:flex-start;padding:7px 14px;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(40,13,3,.55)}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(40px,6vw,78px);line-height:1.02;letter-spacing:-.035em}
+.cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.cta .slide{width:310px;max-width:100%}
+.link{padding:14px 22px;font-size:15px;color:rgba(255,255,255,.88)}
+.login{flex:1 1 340px;max-width:440px;padding:32px;border:1px solid rgba(255,255,255,.16);border-radius:26px;background:rgba(40,13,3,.66);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.tabs{display:flex;gap:4px;padding:4px;margin-bottom:26px;border-radius:12px;background:rgba(255,255,255,.06)}
+.tabs button{flex:1;min-height:44px;border-radius:9px;font-size:14px;font-weight:500;color:rgba(255,255,255,.8)}
+.tabs button[aria-selected="true"]{background:#fff;color:var(--dark);font-weight:600}
+.login h2{font-family:var(--display);font-size:26px;font-weight:600;letter-spacing:-.02em;margin-bottom:8px}
+.login .hint{font-size:14px;line-height:1.5;color:var(--faint);margin-bottom:22px}
+.login .field+.field{margin-top:14px}
+.login .slide{margin-top:18px}
+.foot{position:relative;margin-top:auto;display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;padding:26px clamp(18px,3vw,44px) 30px;font-size:13px;color:rgba(255,255,255,.85)}
+.foot span:first-child{display:inline-flex;align-items:center;gap:9px}
+
+/* ---------- STUDIO ---------- */
+#studio{background:radial-gradient(90% 40% at 50% -8%,rgba(255,61,0,.32) 0%,rgba(18,4,0,0) 70%),var(--ground)}
+.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:18px clamp(18px,3vw,44px);border-bottom:1px solid rgba(255,255,255,.1)}
+.sync{display:inline-flex;align-items:center;gap:9px;padding:8px 15px;border:1px solid var(--line);border-radius:999px;background:rgba(40,13,3,.55);font-size:13px;color:rgba(255,255,255,.88)}
+.who{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.who b{font-size:14px;font-weight:600;color:var(--amber)}
+main{width:100%;max-width:1280px;margin:0 auto;padding:32px clamp(18px,3vw,44px) 56px;display:flex;flex-direction:column;gap:24px}
+
+/* ---------- TERMINAL RESPONSE BOX ---------- */
+.terminal{border:1px solid rgba(255,138,31,.35);border-radius:20px;background:#0a0300;padding:18px 22px;box-shadow:inset 0 0 28px rgba(255,61,0,.08)}
+.term-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid rgba(255,255,255,.1)}
+.term-dots{display:flex;gap:6px;align-items:center}
+.term-dots i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.term-title{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--amber);letter-spacing:.06em;text-transform:uppercase}
+.term-body{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.7;color:#a7f3d0;max-height:190px;overflow-y:auto;white-space:pre-wrap}
+
+/* ---------- STEP CARDS ---------- */
+.row{display:flex;flex-wrap:wrap;gap:18px}
+.bot{flex:1 1 280px;display:flex;flex-direction:column;gap:12px;padding:24px;cursor:pointer;transition:border-color .2s,background .2s}
+.bot.active{border-color:var(--lit);background:rgba(255,90,15,.16);box-shadow:0 10px 30px rgba(255,61,0,.18)}
+.bot .v{font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--amber)}
+.bot h2{font-family:var(--display);font-size:23px;font-weight:600;letter-spacing:-.02em}
+.bot p{font-size:13.5px;line-height:1.55;color:var(--soft)}
+.panel{padding:24px;background:var(--glass2)}
+.panel h2{font-family:var(--display);font-size:20px;font-weight:600}
+.panel-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+
+/* ---------- ACCOUNT SEQUENCE PILLS ---------- */
+.acc-grid{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.acc-pill{padding:8px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(18,4,0,.65);font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:8px}
+.acc-pill.saved{border-color:rgba(126,231,135,.5);color:#a7f3d0}
+
+/* ---------- CHARACTER SLOTS ---------- */
+.char-list{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}
+.char-item{flex:1 1 220px;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,179,107,.35);background:rgba(18,4,0,.65);display:flex;flex-direction:column;gap:8px}
+.char-item b{font-size:13px;color:var(--amber)}
+
+/* ---------- ADMIN TABLE ---------- */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.1)}
+th{color:var(--amber);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600}
+.badge.ok{background:rgba(16,185,129,.2);color:#6ee7b7}
+.badge.wait{background:rgba(245,158,11,.22);color:#fcd34d}
+
+/* ---------- landing page motion ---------- */
+@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes glow{from{opacity:.35;transform:scale(1)}to{opacity:.95;transform:scale(1.1)}}
+@keyframes drift{from{transform:translateX(0)}to{transform:translateX(28px)}}
+@keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(5px)}}
+#home::before{content:"";position:absolute;left:-10%;right:-10%;bottom:-30%;height:75%;pointer-events:none;
+  background:radial-gradient(60% 70% at 50% 100%,rgba(255,138,31,.55),rgba(255,61,0,0) 70%);animation:glow 7s ease-in-out infinite alternate}
+#rocks{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#home .mark{animation:fade 1.6s .3s both,drift 16s 2s ease-in-out infinite alternate}
+#home .nav{animation:fade .9s both}
+#home .lead>.tag{animation:rise .8s .05s cubic-bezier(.16,1,.3,1) both}
+#home .lead h1{animation:rise .9s .18s cubic-bezier(.16,1,.3,1) both}
+#home .cta{animation:rise .9s .34s cubic-bezier(.16,1,.3,1) both}
+#home .login{animation:rise .9s .46s cubic-bezier(.16,1,.3,1) both}
+#home .foot{animation:fade 1s .7s both}
+#home .cta .sl-knob svg{animation:nudge 1.7s ease-in-out infinite}
+
+@media(prefers-reduced-motion:reduce){*,*::before{transition-duration:.001ms!important;animation-duration:.001ms!important;animation-iteration-count:1!important}}
+</style>
+</head>
+<body>
+
+<!-- =============================== HOME =============================== -->
+<div class="view" id="home" data-view="home">
+  <div class="mark" aria-hidden="true">ITIHASKAR</div>
+  <canvas id="rocks" aria-hidden="true"></canvas>
+
+  <header class="nav">
+    <a class="brand" href="#home">ItihaskarStudio</a>
+    <nav class="pillnav" aria-label="Primary">
+      <a href="#home">Browser Automation</a><a href="#home">Account Link</a><a href="#home">Work Reports</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="btn" type="button" data-tab-open="login">Login</button>
+      <button class="btn btn--white" type="button" data-tab-open="register">Register</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="lead">
+      <p class="kicker tag">AI Documentary Automation Platform</p>
+      <h1>We Build AI Systems That Save Time And <em>Scale</em></h1>
+      <div class="cta">
+        <div class="slide" data-action="open-account" data-label="Slide to Open Account" data-done="Opening Studio…"></div>
+        <a class="link" href="#panelRegister" data-tab-open="register">Naya member? Register karein</a>
+      </div>
+    </div>
+
+    <div class="login" id="loginCard">
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tabLogin" aria-selected="true" data-tab="login">Login</button>
+        <button type="button" role="tab" id="tabRegister" aria-selected="false" data-tab="register">Register</button>
+      </div>
+
+      <div id="panelLogin" role="tabpanel" aria-labelledby="tabLogin">
+        <h2>Enter Your Unique Code</h2>
+        <p class="hint">Member Code (ITK-XXXX) ya Admin Code (ITK-ADMIN) daalein.</p>
+        <div class="field">
+          <label for="loginCode">Unique code</label>
+          <input id="loginCode" type="text" placeholder="ITK-XXXX" autocomplete="off" style="letter-spacing:.08em">
+        </div>
+        <div class="slide" data-action="login" data-label="Slide to Login" data-done="Opening Studio…"></div>
+        <p class="msg" id="loginMsg" role="status"></p>
+      </div>
+
+      <div id="panelRegister" role="tabpanel" aria-labelledby="tabRegister" hidden>
+        <h2>Register Member</h2>
+        <p class="hint">Register hote hi phone folder choose karein. Admin approval ke baad code active hoga.</p>
+        <div class="field">
+          <label for="regName">Full Name</label>
+          <input id="regName" type="text" placeholder="Poora naam" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="regDob">Date of Birth</label>
+          <input id="regDob" type="date">
+        </div>
+        <div class="slide" data-action="register" data-label="Slide to Register" data-done="Registering…"></div>
+        <p class="msg" id="regMsg" role="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span><i class="dot"></i>Website ↔ Auto-Browser Linked</span>
+    <span>Itihaskar Samay • Clean Terminal Edition</span>
+  </footer>
+</div>
+
+<!-- ============================== STUDIO ============================== -->
+<div class="view" id="studio" data-view="studio" hidden>
+  <header class="bar">
+    <a class="brand" href="#studio">ItihaskarStudio</a>
+    <span class="sync"><i class="dot" id="driveDot"></i><span id="driveStatus">Browser Sync Ready</span></span>
+    <div class="who">
+      <b id="memberLabel">ITK-XXXX</b>
+      <button class="btn" type="button" id="btnHeaderFolder" data-action="choose-folder">📁 Folder: Not Set</button>
+      <button class="btn btn--danger" type="button" data-action="delete-folder-images">🗑️ Delete Folder Images</button>
+      <button class="btn" type="button" data-action="logout">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ITIHASKAR BOT TERMINAL OUTPUT -->
+    <section class="terminal" aria-label="Itihaskar Bot Terminal">
+      <div class="term-top">
+        <div class="term-dots">
+          <i style="background:#ef4444"></i><i style="background:#f59e0b"></i><i style="background:#10b981"></i>
+          <span class="term-title" style="margin-left:8px">ITIHASKAR BOT TERMINAL — LIVE RESPONSE</span>
+        </div>
+        <button class="btn" type="button" style="min-height:30px;padding:0 12px;font-size:11.5px" data-action="clear-terminal">Clear Log</button>
+      </div>
+      <div class="term-body" id="botTerminal">[ITK-BOT] > System Ready. Login Code verified.</div>
+    </section>
+
+    <!-- STEP 0: FREE FIRE STYLE IMMEDIATE PHONE FOLDER SETUP CARD -->
+    <section class="card panel" id="folderSetupCard">
+      <div class="panel-h">
+        <div>
+          <p class="kicker">Mandatory Local Storage Setup</p>
+          <h2>📁 Phone Folder Choose Karein (Free Fire Style Resource Folder)</h2>
+        </div>
+        <span class="badge wait" id="folderBadge">Folder Required</span>
+      </div>
+      <p style="font-size:13.5px;color:var(--soft);margin-bottom:14px">
+        Aapki PDF isi folder se read hogi aur ChatGPT se banne wali saari images (<b>Scene_01.png, Scene_02.png...</b>) isi phone folder me download hongi aur Flow AI me upload hongi. Google Drive me koi image/PDF store nahi hogi.
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <button class="btn btn--white" type="button" data-action="choose-folder">📁 Select Phone Storage Folder</button>
+        <input id="manualFolderName" type="text" value="Download/Itihaskar_Bot" style="max-width:260px;min-height:42px;padding:0 14px;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(18,4,0,.75);color:#fff;font-size:13.5px" placeholder="Folder Name (e.g. Download/Itihaskar_Bot)">
+        <button class="btn btn--ok" type="button" data-action="save-folder-name">✅ Confirm Folder Path</button>
+      </div>
+    </section>
+
+    <!-- ======================= MEMBER WORKSPACE ======================= -->
+    <div id="memberWorkspace" style="display:flex;flex-direction:column;gap:22px">
+
+      <!-- STEP 1: BOT CHOOSE KAREIN -->
+      <section class="card panel">
+        <div class="panel-h">
+          <div>
+            <p class="kicker">Step 1 • Select Automation Engine</p>
+            <h2>1. Kaun sa Bot chalana hai?</h2>
+          </div>
+          <span class="badge ok" id="selectedBotBadge">Selected: Bot 1 (ChatGPT Image Bot)</span>
+        </div>
+        <div class="row">
+          <article class="card bot active" id="botCard1" data-action="select-bot" data-bot="1">
+            <span class="v">BOT 1 • IMAGE GENERATION</span>
+            <h2>ChatGPT Image Bot</h2>
+            <p>Account_1 se Account_7 sequence, PDF prompt typing, character reference check, aur phone folder me <b>Scene_01.png</b> auto-rename download.</p>
+          </article>
+          <article class="card bot" id="botCard2" data-action="select-bot" data-bot="2">
+            <span class="v">BOT 2 • VIDEO GENERATION</span>
+            <h2>Flow AI Video Bot</h2>
+            <p>Phone folder se <b>Scene_01.png</b> uthakar Flow AI me upload karega aur video prompt type karke video generate karega.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- STEP 2: ACCOUNT SETUP (SAVED FOREVER + RESET ALL ACCOUNTS BUTTON) -->
+      <section class="card panel">
+        <div class="panel-h">
+          <div>
+            <p class="kicker">Step 2 • Website ↔ Browser Same Account Sequence</p>
+            <h2>2. Account Setup (<span id="accStepStatusText">Saved & Linked</span>)</h2>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button class="btn btn--ok" type="button" data-action="save-accounts">💾 Save Account Setup</button>
+            <button class="btn btn--danger" type="button" data-action="reset-accounts">🔄 Reset All Accounts</button>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-bottom:10px">
+          <div class="field" style="flex:1 1 200px">
+            <label for="chatgptAccCount">ChatGPT Accounts (Sequence: Account_1 .. N)</label>
+            <select id="chatgptAccCount">
+              <option value="1">1 Account (Account_1)</option>
+              <option value="2">2 Accounts (Account_1 .. Account_2)</option>
+              <option value="3">3 Accounts (Account_1 .. Account_3)</option>
+              <option value="4">4 Accounts (Account_1 .. Account_4)</option>
+              <option value="5">5 Accounts (Account_1 .. Account_5)</option>
+              <option value="6">6 Accounts (Account_1 .. Account_6)</option>
+              <option value="7" selected>7 Accounts (Account_1 .. Account_7)</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1 1 200px">
+            <label for="flowAccCount">Flow AI Accounts (Sequence: Flow_Account_1 .. N)</label>
+            <select id="flowAccCount">
+              <option value="1">1 Flow Account (Flow_Account_1)</option>
+              <option value="2">2 Flow Accounts (Flow_Account_1 .. 2)</option>
+              <option value="3" selected>3 Flow Accounts (Flow_Account_1 .. 3)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="acc-grid" id="accSequencePreview"></div>
+      </section>
+
+      <!-- STEP 3: CHOOSE PDF & SMART CHARACTER CHECK -->
+      <section class="card panel">
+        <div class="panel-h">
+          <div>
+            <p class="kicker">Step 3 • Local PDF Reader & Conditional Character Check</p>
+            <h2>3. PDF Script Choose Karein</h2>
+          </div>
+          <span class="badge wait" id="pdfStatusBadge">No PDF Loaded</span>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+          <label class="btn btn--white" style="display:inline-flex;align-items:center;cursor:pointer">
+            📄 Choose PDF From Phone Folder
+            <input id="pdfFileInput" type="file" accept=".pdf,.txt" hidden>
+          </label>
+          <span id="pdfFileNameLabel" style="font-size:13.5px;color:var(--amber)">Koi PDF select nahi hui hai</span>
+        </div>
+
+        <!-- CONDITIONAL CHARACTER UPLOAD (SHOWN ONLY IF PDF HAS "USE UPLOADED IMAGE AS ...") -->
+        <div id="characterUploadSection" style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12)" hidden>
+          <p class="kicker" style="color:#fcd34d">Recurring Character Detected in PDF Prompts!</p>
+          <h3 style="font-size:16px;margin-top:4px">PDF me niche diye gaye recurring characters mile hain — unki reference image choose karein:</h3>
+          <div class="char-list" id="characterSlotsContainer"></div>
+        </div>
+      </section>
+
+      <!-- STEP 4: SCENE RANGE & START BROWSER AUTOMATION -->
+      <section class="card panel">
+        <div class="panel-h">
+          <div>
+            <p class="kicker">Step 4 • Launch Linked Auto-Browser</p>
+            <h2>4. Start Browser Automation</h2>
+          </div>
+          <span class="badge ok" id="queueSummaryBadge">Ready</span>
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:18px">
+          <div class="field" style="flex:1 1 140px">
+            <label for="startSceneInput">Start Scene</label>
+            <input id="startSceneInput" type="number" min="1" value="1">
+          </div>
+          <div class="field" style="flex:1 1 140px">
+            <label for="endSceneInput">End Scene</label>
+            <input id="endSceneInput" type="number" min="1" value="1">
+          </div>
+          <div class="field" style="flex:2 1 260px">
+            <label>Browser Login Code (Auto-Fetch Key)</label>
+            <input id="browserSyncCodeDisplay" type="text" readonly value="ITK-XXXX" style="color:var(--amber);font-weight:700">
+          </div>
+        </div>
+
+        <div class="slide" data-action="start-browser-automation" data-label="Slide to Start Browser Automation" data-done="Synced! Opening Auto-Browser…"></div>
+      </section>
+    </div>
+
+    <!-- ======================= ADMIN WORKSPACE ======================= -->
+    <div id="adminWorkspace" style="display:flex;flex-direction:column;gap:22px" hidden>
+      <section class="card panel">
+        <div class="panel-h">
+          <div>
+            <p class="kicker">Admin Control Center</p>
+            <h2>Members List (Approve ya Approved Member ko Kick / Delete Karein)</h2>
+          </div>
+          <button class="btn btn--white" type="button" data-action="admin-refresh">🔄 Refresh List</button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Member Name</th>
+                <th>DOB</th>
+                <th>Status</th>
+                <th>Accounts</th>
+                <th>Action (Approve / Kick & Delete)</th>
+              </tr>
+            </thead>
+            <tbody id="adminMembersTbody">
+              <tr><td colspan="6">Loading members...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card panel">
+        <div class="panel-h">
+          <div>
+            <p class="kicker">Google Drive • Member_Work_Reports Only</p>
+            <h2>Member Work Reports (Kitne Baje Se Kitne Baje Tak & Scene Errors)</h2>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Member</th>
+                <th>Bot Used</th>
+                <th>Start → End Time</th>
+                <th>Processed / Done</th>
+                <th>Errors (Img / Vid)</th>
+              </tr>
+            </thead>
+            <tbody id="adminReportsTbody">
+              <tr><td colspan="6">No work reports yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* =====================================================================
+   ITIHASKAR STUDIO v6.0 — CLEAN TERMINAL + AUTO-BROWSER SYNC CONTROLLER
+   ===================================================================== */
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyRW51YV45SSRVcQwGTlhyJE33C4X5TnkGQKpyZTUfMX8uYKUxdBH0xmP-5TDqDQ15m/exec';
+
+if (window.pdfjsLib) {
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const STATE = {
+  code: localStorage.getItem('itk_v6_code') || '',
+  role: localStorage.getItem('itk_v6_role') || 'member',
+  memberName: localStorage.getItem('itk_v6_name') || '',
+  localFolderName: localStorage.getItem('itk_v6_folder') || '',
+  dirHandle: null,
+  selectedBot: Number(localStorage.getItem('itk_v6_bot') || 1),
+  accountSetup: JSON.parse(localStorage.getItem('itk_v6_acc_setup') || 'null') || {
+    configured: false,
+    needsBrowserLogin: true,
+    resetCounter: 0,
+    chatgptAccounts: ['Account_1','Account_2','Account_3','Account_4','Account_5','Account_6','Account_7'],
+    flowAccounts: ['Flow_Account_1','Flow_Account_2','Flow_Account_3']
+  },
+  pdfFileName: '',
+  scenes: [],
+  detectedCharacters: [],
+  characterImagesBase64: {}
+};
+
+function termLog(msg) {
+  const box = $('#botTerminal');
+  if (!box) return;
+  const t = new Date().toLocaleTimeString('en-IN', { hour12: false });
+  box.textContent += `\n[${t}] [ITK-BOT] > ${msg}`;
+  box.scrollTop = box.scrollHeight;
+}
+
+async function apiPost(payload) {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch (e) {
+    return { ok: false, offline: true, error: e.message };
+  }
+}
+
+function renderAccountPills() {
+  const container = $('#accSequencePreview');
+  if (!container) return;
+  const cCount = Number($('#chatgptAccCount').value || 7);
+  const fCount = Number($('#flowAccCount').value || 3);
+  const list = STATE.selectedBot === 2
+    ? Array.from({ length: fCount }, (_, i) => `Flow_Account_${i + 1}`)
+    : Array.from({ length: cCount }, (_, i) => `Account_${i + 1}`);
+
+  container.innerHTML = list.map((acc, idx) =>
+    `<span class="acc-pill ${STATE.accountSetup.configured ? 'saved' : ''}">
+      <b>#${idx + 1}</b> ${acc} ${STATE.accountSetup.configured ? '✅ Saved' : '(Setup Needed)'}
+    </span>`
+  ).join('');
+
+  $('#accStepStatusText').textContent = STATE.accountSetup.configured
+    ? 'Saved Forever — Browser Linked in Same Sequence'
+    : 'Not Set Up — Browser Will Ask Login for Account_1..N';
+}
+
+function updateFolderUI() {
+  const hasFolder = Boolean(STATE.localFolderName);
+  $('#btnHeaderFolder').textContent = hasFolder ? `📁 ${STATE.localFolderName}` : '📁 Folder: Not Set';
+  $('#folderBadge').textContent = hasFolder ? `Linked: ${STATE.localFolderName}` : 'Folder Required';
+  $('#folderBadge').className = 'badge ' + (hasFolder ? 'ok' : 'wait');
+  if (hasFolder) {
+    $('#manualFolderName').value = STATE.localFolderName;
+  }
+}
+
+/* ---------- SMART PDF READER & CONDITIONAL CHARACTER DETECTOR ---------- */
+async function parsePdfOrTextFile(file) {
+  termLog(`Reading file from folder: ${file.name} ...`);
+  let fullText = '';
+
+  if (file.name.toLowerCase().endsWith('.pdf') && window.pdfjsLib) {
+    const buf = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      const pageStr = content.items.map((it) => it.str).join(' ');
+      fullText += '\n' + pageStr;
+    }
+  } else {
+    fullText = await file.text();
+  }
+
+  // Parse SCENE blocks
+  const scenes = [];
+  const sceneRegex = /SCENE\s*(\d+)([\s\S]*?)(?=SCENE\s*\d+|$)/gi;
+  let match;
+  while ((match = sceneRegex.exec(fullText)) !== null) {
+    const sNo = Number(match[1]);
+    const block = match[2].trim();
+    let imgPrompt = block;
+    let vidPrompt = block;
+
+    const imgMatch = block.match(/IMAGE\s*PROMPT\s*[:\-]?\s*([\s\S]*?)(?=VIDEO\s*PROMPT|NARRATION|VOICEOVER|$)/i);
+    const vidMatch = block.match(/VIDEO\s*PROMPT\s*[:\-]?\s*([\s\S]*?)(?=IMAGE\s*PROMPT|NARRATION|VOICEOVER|$)/i);
+    if (imgMatch && imgMatch[1].trim()) imgPrompt = imgMatch[1].trim();
+    if (vidMatch && vidMatch[1].trim()) vidPrompt = vidMatch[1].trim();
+
+    // Detect recurring character line inside prompt: e.g. "USE UPLOADED IMAGE AS <CHAR>"
+    const charMatch = block.match(/USE\s+UPLOADED\s+IMAGE\s+AS\s+([A-Za-z0-9_ \-]{2,30})/i)
+                   || block.match(/uploaded\s+image\s+as\s+([A-Za-z0-9_ \-]{2,30})/i);
+    const charName = charMatch ? charMatch[1].trim().replace(/[.,;:]+$/, '').toUpperCase() : '';
+
+    scenes.push({
+      scene_no: sNo,
+      image_prompt: imgPrompt,
+      video_prompt: vidPrompt,
+      character_ref: charName,
+      status: 'pending'
+    });
+  }
+
+  // Fallback if PDF doesn't use "SCENE X" header: split by paragraphs/lines
+  if (scenes.length === 0) {
+    const chunks = fullText.split(/\n{2,}/).map((c) => c.trim()).filter((c) => c.length > 20);
+    chunks.forEach((ch, idx) => {
+      const charMatch = ch.match(/USE\s+UPLOADED\s+IMAGE\s+AS\s+([A-Za-z0-9_ \-]{2,30})/i);
+      const charName = charMatch ? charMatch[1].trim().toUpperCase() : '';
+      scenes.push({
+        scene_no: idx + 1,
+        image_prompt: ch,
+        video_prompt: ch,
+        character_ref: charName,
+        status: 'pending'
+      });
+    });
+  }
+
+  STATE.pdfFileName = file.name;
+  STATE.scenes = scenes;
+  $('#pdfFileNameLabel').textContent = `${file.name} (${scenes.length} Scenes)`;
+  $('#pdfStatusBadge').textContent = `${scenes.length} Scenes Ready`;
+  $('#pdfStatusBadge').className = 'badge ok';
+
+  if (scenes.length > 0) {
+    $('#startSceneInput').value = scenes[0].scene_no;
+    $('#endSceneInput').value = scenes[scenes.length - 1].scene_no;
+  }
+
+  // Check if ANY prompt has a recurring character line
+  const charSet = new Set();
+  scenes.forEach((s) => { if (s.character_ref) charSet.add(s.character_ref); });
+  STATE.detectedCharacters = [...charSet];
+
+  termLog(`PDF Parsed Successfully: Total ${scenes.length} Scenes found.`);
+
+  const charSec = $('#characterUploadSection');
+  const slotsBox = $('#characterSlotsContainer');
+
+  if (STATE.detectedCharacters.length === 0) {
+    // Crucial Rule: If NO prompt has "uploaded image as ...", DO NOT ask to upload character image!
+    charSec.hidden = true;
+    slotsBox.innerHTML = '';
+    termLog(`Character Check: Kisi bhi prompt me "USE UPLOADED IMAGE AS" character line nahi hai. Character Image upload skipped!`);
+  } else {
+    charSec.hidden = false;
+    termLog(`Character Check: ${STATE.detectedCharacters.length} character(s) mile (${STATE.detectedCharacters.join(', ')}). Reference image select karein.`);
+    slotsBox.innerHTML = STATE.detectedCharacters.map((cName) => `
+      <div class="char-item">
+        <b>🧑 Character: ${cName}</b>
+        <input type="file" accept="image/*" data-char-name="${cName}" class="char-file-input" style="font-size:12px">
+      </div>
+    `).join('');
+
+    $$('.char-file-input', slotsBox).forEach((inp) => {
+      inp.addEventListener('change', async (ev) => {
+        const f = ev.target.files && ev.target.files[0];
+        if (!f) return;
+        const cName = ev.target.dataset.charName;
+        const reader = new FileReader();
+        reader.onload = () => {
+          STATE.characterImagesBase64[cName] = reader.result;
+          termLog(`Character Image Loaded for "${cName}": ${f.name}`);
+        };
+        reader.readAsDataURL(f);
+      });
+    });
+  }
+}
+
+/* ---------- ADMIN TABLE RENDERER ---------- */
+function renderAdminTables(data) {
+  const members = (data && Array.isArray(data.members)) ? data.members : [];
+  const reports = (data && Array.isArray(data.workReports)) ? data.workReports : [];
+
+  const mBody = $('#adminMembersTbody');
+  if (members.length === 0) {
+    mBody.innerHTML = '<tr><td colspan="6">Abhi koi member registered nahi hai.</td></tr>';
+  } else {
+    mBody.innerHTML = members.map((m) => {
+      const isApproved = m.status === 'approved';
+      const cLen = (m.accountSetup && m.accountSetup.chatgptAccounts) ? m.accountSetup.chatgptAccounts.length : 7;
+      return `<tr>
+        <td><b style="color:var(--amber)">${m.code}</b></td>
+        <td>${m.name}</td>
+        <td>${m.dob}</td>
+        <td><span class="badge ${isApproved ? 'ok' : 'wait'}">${m.status.toUpperCase()}</span></td>
+        <td>Account_1..${cLen}</td>
+        <td style="display:flex;gap:8px;flex-wrap:wrap">
+          ${!isApproved ? `<button class="btn btn--ok" type="button" data-admin-approve="${m.code}" style="min-height:34px;padding:0 12px;font-size:12px">✅ Approve</button>` : ''}
+          <button class="btn btn--danger" type="button" data-admin-delete="${m.code}" style="min-height:34px;padding:0 12px;font-size:12px">🗑️ Kick / Delete Account</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    $$('[data-admin-approve]', mBody).forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const targetCode = btn.dataset.adminApprove;
+        termLog(`Approving member ${targetCode}...`);
+        const res = await apiPost({ action: 'admin_approve_member', adminCode: STATE.code, targetCode });
+        if (res.ok) {
+          termLog(`Member ${targetCode} Approved!`);
+          renderAdminTables(res);
+        }
+      });
+    });
+
+    $$('[data-admin-delete]', mBody).forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const targetCode = btn.dataset.adminDelete;
+        termLog(`Deleting / Kicking member ${targetCode}...`);
+        const res = await apiPost({ action: 'admin_delete_member', adminCode: STATE.code, targetCode });
+        if (res.ok) {
+          termLog(`Member ${targetCode} Account Deleted permanently!`);
+          renderAdminTables(res);
+        }
+      });
+    });
+  }
+
+  const rBody = $('#adminReportsTbody');
+  if (reports.length === 0) {
+    rBody.innerHTML = '<tr><td colspan="6">Abhi koi Work Report Drive me nahi aayi hai.</td></tr>';
+  } else {
+    rBody.innerHTML = reports.map((r) => `
+      <tr>
+        <td>${r.date || '-'}</td>
+        <td><b>${r.memberName}</b> (${r.code})</td>
+        <td>${r.botName}</td>
+        <td>${r.startTime} → ${r.endTime}</td>
+        <td>${r.totalProcessed} Run / <b style="color:#6ee7b7">${r.scenesSuccess} Done</b></td>
+        <td style="color:#fca5a5">Img Err: ${r.imageErrors || 0} | Vid Err: ${r.videoErrors || 0}</td>
+      </tr>
+    `).join('');
+  }
+}
+
+/* ---------- ITK UI CONTROLLER ---------- */
+const ITK = window.ITK = {
+  show(view) {
+    $$('[data-view]').forEach((v) => (v.hidden = v.dataset.view !== view));
+    try { history.replaceState(null, '', '#' + view); } catch (e) {}
+    window.scrollTo(0, 0);
+  },
+  setMember(text) {
+    $('#memberLabel').textContent = text;
+    $('#browserSyncCodeDisplay').value = STATE.code || 'ITK-XXXX';
+  },
+  setDrive(text, ok = true) {
+    $('#driveStatus').textContent = text;
+    $('#driveDot').classList.toggle('off', !ok);
+  },
+  say(id, text, isError = false) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    el.classList.toggle('err', isError);
+  },
+
+  handlers: {
+    async 'open-account'() {
+      if (STATE.code) {
+        ITK.show('studio');
+      } else {
+        $('#loginCode').focus();
+      }
+    },
+
+    async login() {
+      const code = $('#loginCode').value.trim().toUpperCase();
+      if (!code) throw new Error('Pehle apna unique code (ITK-XXXX) ya Admin code daalein.');
+      ITK.say('loginMsg', 'Checking code with Itihaskar Server...', false);
+
+      const ADMIN_CODES = ['ITK-ADMIN', 'ADMIN123', 'ADMIN', 'ITIHASKAR@ADMIN', 'ADMIN_MAIN'];
+      const isAdminCode = ADMIN_CODES.includes(code);
+
+      const res = await apiPost({ action: 'login_member', code: isAdminCode ? 'ITK-ADMIN' : code });
+      if (!isAdminCode && !res.ok && !res.offline) {
+        throw new Error(res.error || 'Login failed.');
+      }
+
+      STATE.code = code;
+      localStorage.setItem('itk_v6_code', code);
+
+      if (isAdminCode || res.role === 'admin') {
+        STATE.role = 'admin';
+        localStorage.setItem('itk_v6_role', 'admin');
+        ITK.setMember('ADMIN (' + code + ')');
+        $('#memberWorkspace').hidden = true;
+        $('#folderSetupCard').hidden = true;
+        $('#adminWorkspace').hidden = false;
+        ITK.show('studio');
+        termLog(`Admin Logged In (${code}). Members & Work Reports loaded.`);
+        renderAdminTables(res);
+        return;
+      }
+
+      STATE.role = 'member';
+      localStorage.setItem('itk_v6_role', 'member');
+      const m = res.member || { name: 'Member', code, accountSetup: STATE.accountSetup };
+      STATE.memberName = m.name || 'Member';
+      localStorage.setItem('itk_v6_name', STATE.memberName);
+
+      if (m.localFolderName) {
+        STATE.localFolderName = m.localFolderName;
+        localStorage.setItem('itk_v6_folder', m.localFolderName);
+      }
+      if (m.accountSetup) {
+        STATE.accountSetup = m.accountSetup;
+        localStorage.setItem('itk_v6_acc_setup', JSON.stringify(m.accountSetup));
+      }
+
+      $('#memberWorkspace').hidden = false;
+      $('#folderSetupCard').hidden = false;
+      $('#adminWorkspace').hidden = true;
+      ITK.setMember(`${STATE.code} • ${STATE.memberName}`);
+      updateFolderUI();
+      renderAccountPills();
+      ITK.show('studio');
+      termLog(`Welcome ${STATE.memberName} (${STATE.code}). Website ↔ Browser Linked!`);
+      if (!STATE.localFolderName) {
+        termLog(`Action Required: Sabse pehle apna Phone Storage Folder choose karein.`);
+      }
+    },
+
+    async register() {
+      const name = $('#regName').value.trim();
+      const dob = $('#regDob').value;
+      if (!name || !dob) throw new Error('Naam aur Date of Birth dono bharein.');
+      ITK.say('regMsg', 'Registering member & generating ITK code...', false);
+
+      const res = await apiPost({ action: 'register_member', name, dob });
+      const genCode = (res && res.code) ? res.code : ('ITK-' + Math.floor(1000 + Math.random() * 9000));
+
+      STATE.code = genCode;
+      STATE.memberName = name;
+      localStorage.setItem('itk_v6_code', genCode);
+      localStorage.setItem('itk_v6_name', name);
+      $('#loginCode').value = genCode;
+
+      // Prompt folder selection immediately right after registration (Free Fire style)
+      if (window.showDirectoryPicker) {
+        try {
+          const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
+          STATE.dirHandle = dir;
+          STATE.localFolderName = dir.name;
+          localStorage.setItem('itk_v6_folder', dir.name);
+          await apiPost({ action: 'save_folder_setup', code: genCode, folderName: dir.name });
+        } catch (e) {}
+      }
+      if (!STATE.localFolderName) {
+        STATE.localFolderName = 'Download/Itihaskar_Bot';
+        localStorage.setItem('itk_v6_folder', STATE.localFolderName);
+      }
+
+      ITK.say('regMsg', `Registered! Aapka Unique Code: ${genCode} | Folder: ${STATE.localFolderName} (Admin approval ke baad Login karein).`, false);
+    },
+
+    async logout() {
+      STATE.code = '';
+      localStorage.removeItem('itk_v6_code');
+      ITK.show('home');
+    },
+
+    async 'clear-terminal'() {
+      $('#botTerminal').textContent = '[ITK-BOT] > Terminal cleared.';
+    },
+
+    async 'choose-folder'() {
+      if (window.showDirectoryPicker) {
+        try {
+          const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
+          STATE.dirHandle = dir;
+          STATE.localFolderName = dir.name;
+          localStorage.setItem('itk_v6_folder', dir.name);
+          updateFolderUI();
+          await apiPost({ action: 'save_folder_setup', code: STATE.code, folderName: dir.name });
+          termLog(`Local Phone Folder Linked: "${dir.name}". Saari PDF aur Scene_XX.png images yahi rahengi.`);
+          return;
+        } catch (e) {}
+      }
+      const fallback = $('#manualFolderName').value.trim() || 'Download/Itihaskar_Bot';
+      STATE.localFolderName = fallback;
+      localStorage.setItem('itk_v6_folder', fallback);
+      updateFolderUI();
+      await apiPost({ action: 'save_folder_setup', code: STATE.code, folderName: fallback });
+      termLog(`Local Phone Folder Path Set: "${fallback}".`);
+    },
+
+    async 'save-folder-name'() {
+      const folder = $('#manualFolderName').value.trim() || 'Download/Itihaskar_Bot';
+      STATE.localFolderName = folder;
+      localStorage.setItem('itk_v6_folder', folder);
+      updateFolderUI();
+      await apiPost({ action: 'save_folder_setup', code: STATE.code, folderName: folder });
+      termLog(`Folder Confirmed: "${folder}".`);
+    },
+
+    async 'delete-folder-images'() {
+      let deletedCount = 0;
+      if (STATE.dirHandle && STATE.dirHandle.values) {
+        try {
+          for await (const entry of STATE.dirHandle.values()) {
+            if (entry.kind === 'file' && /\.(png|jpg|jpeg|webp)$/i.test(entry.name)) {
+              await STATE.dirHandle.removeEntry(entry.name);
+              deletedCount++;
+            }
+          }
+        } catch (e) {}
+      }
+      localStorage.removeItem('itk_cached_scene_images');
+      termLog(`🗑️ Delete Folder Images Complete! (${deletedCount} local image files deleted from ${STATE.localFolderName || 'Phone Folder'}).`);
+    },
+
+    async 'select-bot'(ctx) {
+      const b = Number(ctx.data.bot || 1);
+      STATE.selectedBot = b;
+      localStorage.setItem('itk_v6_bot', String(b));
+      $('#botCard1').classList.toggle('active', b === 1);
+      $('#botCard2').classList.toggle('active', b === 2);
+      $('#selectedBotBadge').textContent = b === 2
+        ? 'Selected: Bot 2 (Flow AI Video Bot)'
+        : 'Selected: Bot 1 (ChatGPT Image Bot)';
+      renderAccountPills();
+      termLog(`Selected Bot ${b}: ${b === 2 ? 'Flow AI Video Bot (Local Folder Image -> Video)' : 'ChatGPT Image Bot (Prompt -> Local Folder Scene_XX.png)'}`);
+    },
+
+    async 'save-accounts'() {
+      const chatgptCount = Number($('#chatgptAccCount').value || 7);
+      const flowCount = Number($('#flowAccCount').value || 3);
+      const res = await apiPost({
+        action: 'save_account_setup',
+        code: STATE.code,
+        chatgptCount,
+        flowCount,
+        needsBrowserLogin: true
+      });
+      STATE.accountSetup = (res && res.accountSetup) ? res.accountSetup : {
+        configured: true,
+        needsBrowserLogin: true,
+        resetCounter: STATE.accountSetup.resetCounter || 0,
+        chatgptAccounts: Array.from({ length: chatgptCount }, (_, i) => `Account_${i + 1}`),
+        flowAccounts: Array.from({ length: flowCount }, (_, i) => `Flow_Account_${i + 1}`)
+      };
+      localStorage.setItem('itk_v6_acc_setup', JSON.stringify(STATE.accountSetup));
+      renderAccountPills();
+      termLog(`Account Setup Saved Permanently! Sequence: ${STATE.accountSetup.chatgptAccounts.join(' -> ')}. Browser me bhi exact yahi sequence chalegi.`);
+    },
+
+    async 'reset-accounts'() {
+      const res = await apiPost({ action: 'reset_member_accounts', code: STATE.code });
+      STATE.accountSetup = (res && res.accountSetup) ? res.accountSetup : {
+        configured: false,
+        needsBrowserLogin: true,
+        resetCounter: (STATE.accountSetup.resetCounter || 0) + 1,
+        chatgptAccounts: ['Account_1','Account_2','Account_3','Account_4','Account_5','Account_6','Account_7'],
+        flowAccounts: ['Flow_Account_1','Flow_Account_2','Flow_Account_3']
+      };
+      localStorage.setItem('itk_v6_acc_setup', JSON.stringify(STATE.accountSetup));
+      renderAccountPills();
+      termLog(`🔄 All Accounts Reset! Saare purane account setups hata diye gaye hain. Ab dubara Account_1 se setup karein.`);
+    },
+
+    async 'start-browser-automation'() {
+      if (!STATE.localFolderName) {
+        STATE.localFolderName = $('#manualFolderName').value.trim() || 'Download/Itihaskar_Bot';
+        updateFolderUI();
+      }
+      if (STATE.scenes.length === 0) {
+        termLog(`ERROR: Pehle Step 3 me apni PDF script choose karein!`);
+        throw new Error('Pehle PDF select karein.');
+      }
+
+      const startNo = Number($('#startSceneInput').value || 1);
+      const endNo = Number($('#endSceneInput').value || STATE.scenes.length);
+      const filteredScenes = STATE.scenes.filter((s) => s.scene_no >= startNo && s.scene_no <= endNo);
+
+      const charsPayload = STATE.detectedCharacters.map((name) => ({
+        name,
+        hasImage: Boolean(STATE.characterImagesBase64[name]),
+        base64Data: STATE.characterImagesBase64[name] || ''
+      }));
+
+      termLog(`Syncing ${filteredScenes.length} scenes (Scene ${startNo} to ${endNo}) with Code ${STATE.code}...`);
+
+      const payload = {
+        action: 'start_browser_automation',
+        code: STATE.code,
+        botType: STATE.selectedBot,
+        localFolderName: STATE.localFolderName,
+        pdfFileName: STATE.pdfFileName,
+        startScene: startNo,
+        endScene: endNo,
+        hasRecurringCharacters: STATE.detectedCharacters.length > 0,
+        characters: charsPayload,
+        scenes: filteredScenes
+      };
+
+      localStorage.setItem('itk_v6_active_task', JSON.stringify(payload));
+      await apiPost(payload);
+
+      $('#queueSummaryBadge').textContent = `Synced ${filteredScenes.length} Scenes to ${STATE.code}`;
+      termLog(`✅ Automation Queued for Code: ${STATE.code}!`);
+      termLog(`👉 Ab "Itihaskar Auto-Browser" app kholein aur Login Code "${STATE.code}" daalein — Browser apne aap saara data fetch karke automation start kar dega!`);
+    },
+
+    async 'admin-refresh'() {
+      termLog('Refreshing Admin Member & Work Report list...');
+      const res = await apiPost({ action: 'admin_dashboard', adminCode: STATE.code });
+      if (res.ok) renderAdminTables(res);
+    }
+  }
+};
+
+/* ---------- WIRE FILE INPUT & SELECTORS ---------- */
+$('#pdfFileInput').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (file) parsePdfOrTextFile(file);
+});
+$('#chatgptAccCount').addEventListener('change', renderAccountPills);
+$('#flowAccCount').addEventListener('change', renderAccountPills);
+
+/* ---------- run a handler safely ---------- */
+async function run(action, el, errTarget) {
+  const fn = ITK.handlers[action];
+  if (!fn) return;
+  try { await fn({ el, data: el.dataset }); }
+  catch (err) {
+    if (errTarget) ITK.say(errTarget, err.message || 'Kuch galat hua, dobara try karein.', true);
+    throw err;
+  }
+}
+
+/* ---------- slide-to-confirm buttons ---------- */
+const ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+const errFor = { login: 'loginMsg', register: 'regMsg' };
+
+$$('.slide').forEach((el) => {
+  el.innerHTML = '<span class="sl-label"></span><span class="sl-done" aria-live="polite"></span><button type="button" class="sl-knob"></button>';
+  const label = $('.sl-label', el), done = $('.sl-done', el), knob = $('.sl-knob', el);
+  label.textContent = el.dataset.label; done.textContent = el.dataset.done;
+  knob.innerHTML = ARROW; knob.setAttribute('aria-label', el.dataset.label);
+  let x = 0, max = 0, start = 0, travel = 0, lastX = 0, dragging = false, busy = false;
+
+  const set = (v) => { x = v; knob.style.transform = `translateX(${v}px)`; label.style.opacity = Math.max(0, 1 - v / (max * 0.8 || 1)); };
+  const reset = () => { el.classList.remove('is-done', 'busy'); busy = false; label.style.opacity = 1; set(0); };
+
+  async function complete() {
+    busy = true; max = el.clientWidth - 54; set(max); el.classList.add('is-done', 'busy');
+    try { await run(el.dataset.action, el, errFor[el.dataset.action]); }
+    catch (e) { done.textContent = 'Dobara try karein'; await wait(1400); done.textContent = el.dataset.done; }
+    await wait(900); reset();
+  }
+
+  el.addEventListener('pointerdown', (e) => {
+    if (busy) return;
+    max = el.clientWidth - 54;
+    const x0 = Math.max(0, Math.min(max, e.clientX - el.getBoundingClientRect().left - 27));
+    start = e.clientX - x0; lastX = e.clientX; travel = 0; dragging = true;
+    el.setPointerCapture(e.pointerId); knob.classList.add('drag'); set(x0);
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    travel += Math.abs(e.clientX - lastX); lastX = e.clientX;
+    set(Math.max(0, Math.min(max, e.clientX - start)));
+  });
+  const up = () => {
+    if (!dragging) return;
+    dragging = false; knob.classList.remove('drag');
+    (x >= max * 0.9 && travel > 12) ? complete() : set(0);
+  };
+  el.addEventListener('pointerup', up);
+  el.addEventListener('pointercancel', up);
+  knob.addEventListener('keydown', (e) => {
+    if (['Enter', ' ', 'ArrowRight'].includes(e.key)) { e.preventDefault(); if (!busy) complete(); }
+  });
+});
+
+/* ---------- normal action buttons ---------- */
+$$('[data-action]:not(.slide)').forEach((b) => b.addEventListener('click', () => run(b.dataset.action, b).catch(() => {})));
+
+/* ---------- login / register tabs ---------- */
+function openTab(name) {
+  const login = name === 'login';
+  $('#panelLogin').hidden = !login; $('#panelRegister').hidden = login;
+  $('#tabLogin').setAttribute('aria-selected', login);
+  $('#tabRegister').setAttribute('aria-selected', !login);
+}
+$$('[data-tab]').forEach((b) => b.addEventListener('click', () => openTab(b.dataset.tab)));
+$$('[data-tab-open]').forEach((b) => b.addEventListener('click', (e) => {
+  e.preventDefault(); openTab(b.dataset.tabOpen); $('#loginCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}));
+$('#loginCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); run('login', $('#panelLogin .slide')).catch(() => {}); } });
+
+/* ---------- falling orange asteroids (top-right -> bottom-left) ---------- */
+(function () {
+  const cv = $('#rocks'), home = $('#home'), ctx = cv.getContext('2d');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const DX = -0.78, DY = 0.62, cols = ['255,138,31', '255,61,0', '255,179,107'];
+  let W = 0, H = 0, rocks = [], last = 0;
+  const spawn = (init) => ({
+    r: 0.8 + Math.random() * 1.6, v: 0.06 + Math.random() * 0.11, len: 18 + Math.random() * 52,
+    c: cols[(Math.random() * 3) | 0], a: 0.45 + Math.random() * 0.5,
+    x: Math.random() * (W + H), y: init ? Math.random() * H : -30,
+  });
+  function size() {
+    const d = Math.min(window.devicePixelRatio || 1, 2);
+    W = home.clientWidth; H = home.clientHeight;
+    cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0);
+    const n = Math.max(14, Math.min(34, Math.round(W / 46)));
+    while (rocks.length < n) rocks.push(spawn(true));
+    rocks.length = n;
+  }
+  function draw(dt) {
+    ctx.clearRect(0, 0, W, H);
+    for (const k of rocks) {
+      k.x += DX * k.v * dt; k.y += DY * k.v * dt;
+      if (k.y > H + 40 || k.x < -80) Object.assign(k, spawn(false));
+      const tx = k.x - DX * k.len, ty = k.y - DY * k.len;
+      const g = ctx.createLinearGradient(k.x, k.y, tx, ty);
+      g.addColorStop(0, `rgba(${k.c},${k.a})`); g.addColorStop(1, `rgba(${k.c},0)`);
+      ctx.strokeStyle = g; ctx.lineWidth = k.r; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(k.x, k.y); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.shadowColor = 'rgba(255,138,31,.9)'; ctx.shadowBlur = 8;
+      ctx.fillStyle = `rgba(${k.c},${Math.min(1, k.a + 0.2)})`;
+      ctx.beginPath(); ctx.arc(k.x, k.y, k.r, 0, 6.2832); ctx.fill(); ctx.shadowBlur = 0;
+    }
+  }
+  function loop(t) {
+    const dt = Math.min(50, t - last || 16); last = t;
+    if (!home.hidden && !document.hidden) draw(dt);
+    requestAnimationFrame(loop);
+  }
+  size(); window.addEventListener('resize', size);
+  if (window.ResizeObserver) new ResizeObserver(size).observe(home);
+  if (reduce) draw(0); else requestAnimationFrame(loop);
+})();
+
+/* ---------- initial screen ---------- */
+updateFolderUI();
+renderAccountPills();
+ITK.show('home');
+</script>
+</body>
+</html>
